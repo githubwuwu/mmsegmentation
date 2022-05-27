@@ -8,6 +8,7 @@ import numpy as np
 from mmcv.utils import print_log
 from prettytable import PrettyTable
 from torch.utils.data import Dataset
+import torch
 
 from mmseg.core import eval_metrics, intersect_and_union, pre_eval_to_metrics
 from mmseg.utils import get_root_logger
@@ -91,7 +92,9 @@ class CustomDataset(Dataset):
                  classes=None,
                  palette=None,
                  gt_seg_map_loader_cfg=None,
-                 file_client_args=dict(backend='disk')):
+                 file_client_args=dict(backend='disk'),
+                 multi_label=False):
+        self.multi_label = multi_label
         self.pipeline = Compose(pipeline)
         self.img_dir = img_dir
         self.img_suffix = img_suffix
@@ -297,19 +300,20 @@ class CustomDataset(Dataset):
 
         for pred, index in zip(preds, indices):
             seg_map = self.get_gt_seg_map_by_idx(index)
-            pre_eval_results.append(
-                intersect_and_union(
-                    pred,
-                    seg_map,
-                    len(self.CLASSES),
-                    self.ignore_index,
-                    # as the labels has been converted when dataset initialized
-                    # in `get_palette_for_custom_classes ` this `label_map`
-                    # should be `dict()`, see
-                    # https://github.com/open-mmlab/mmsegmentation/issues/1415
-                    # for more ditails
-                    label_map=dict(),
-                    reduce_zero_label=self.reduce_zero_label))
+            if self.multi_label:
+                ious = []
+                for i in range(len(self.CLASSES)):
+                    iou = intersect_and_union(pred[...,i], seg_map[...,i], 2,
+                                        self.ignore_index, self.label_map,
+                                        self.reduce_zero_label)
+                    ious.append(iou)
+                ious = tuple([torch.stack([_[i] for _ in ious], 0)[:,1] for i in range(len(ious[0]))])
+                pre_eval_results.append(ious)
+            else:
+                pre_eval_results.append(
+                    intersect_and_union(pred, seg_map, len(self.CLASSES),
+                                        self.ignore_index, self.label_map,
+                                        self.reduce_zero_label))
 
         return pre_eval_results
 

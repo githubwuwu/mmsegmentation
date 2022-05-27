@@ -32,13 +32,17 @@ class LoadImageFromFile(object):
     def __init__(self,
                  to_float32=False,
                  color_type='color',
+                 max_value=None,
                  file_client_args=dict(backend='disk'),
-                 imdecode_backend='cv2'):
+                 imdecode_backend='cv2',
+                 force_3chan=False):
         self.to_float32 = to_float32
         self.color_type = color_type
         self.file_client_args = file_client_args.copy()
         self.file_client = None
         self.imdecode_backend = imdecode_backend
+        self.max_value = max_value
+        self.force_3chan = force_3chan
 
     def __call__(self, results):
         """Call functions to load image and get image meta information.
@@ -62,7 +66,15 @@ class LoadImageFromFile(object):
         img = mmcv.imfrombytes(
             img_bytes, flag=self.color_type, backend=self.imdecode_backend)
         if self.to_float32:
-            img = img.astype(np.float32)
+            if self.max_value is None:
+                img = img.astype(np.float32)
+            elif self.max_value == "max":
+                img = img.astype(np.float32) / (img.max() + 1e-7)
+            else:
+                img = img.astype(np.float32) / self.max_value
+
+        if self.force_3chan:
+            img = np.stack([img for _ in range(3)], -1)
 
         results['filename'] = filename
         results['ori_filename'] = results['img_info']['filename']
