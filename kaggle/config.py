@@ -9,7 +9,7 @@ model = dict(
     type='SMPUnet',
     backbone=dict(
         type='timm-efficientnet-b0',
-        pretrained=None
+        pretrained='imagenet'
     ),
     decode_head=dict(
         num_classes=num_classes,
@@ -25,8 +25,8 @@ model = dict(
 dataset_type = 'CustomDataset'
 data_root = './data/mmseg_train/'
 classes = ['large_bowel', 'small_bowel', 'stomach']
-palette = [[0,0,0], [128,128,128], [255,255,255]]
-img_norm_cfg = dict(mean=[0,0,0], std=[1,1,1], to_rgb=True)
+palette = [[0, 0, 0], [128, 128, 128], [255, 255, 255]]
+img_norm_cfg = dict(mean=[0, 0, 0], std=[1, 1, 1], to_rgb=True)
 size = 256
 albu_train_transforms = [
     dict(type='RandomBrightnessContrast', p=0.5),
@@ -59,7 +59,7 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    samples_per_gpu=8,
+    samples_per_gpu=16,
     workers_per_gpu=4,
     train=dict(
         type=dataset_type,
@@ -102,8 +102,9 @@ data = dict(
 log_config = dict(
     interval=50,
     hooks=[
-        dict(type='CustomizedTextLoggerHook', by_epoch=False),
+        dict(type='TextLoggerHook')
     ])
+
 # yapf:enable
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
@@ -112,7 +113,7 @@ resume_from = None
 workflow = [('train', 1)]
 cudnn_benchmark = True
 
-total_iters = 1
+total_iters = 100
 # optimizer
 optimizer = dict(type='AdamW', lr=1e-3, betas=(0.9, 0.999), weight_decay=0.05)
 optimizer_config = dict(type='Fp16OptimizerHook', loss_scale='dynamic')
@@ -125,8 +126,8 @@ lr_config = dict(policy='poly',
 # runtime settings
 find_unused_parameters=True
 runner = dict(type='IterBasedRunner', max_iters=int(total_iters * 1000))
-checkpoint_config = dict(by_epoch=False, interval=int(total_iters * 1000), save_optimizer=False)
-evaluation = dict(by_epoch=False, interval=min(5000, int(total_iters * 1000)), metric=['imDice', 'mDice'], pre_eval=True)
+checkpoint_config = dict(by_epoch=False, interval=int(total_iters * 100), save_optimizer=False)
+evaluation = dict(by_epoch=False, interval=min(5000, int(total_iters * 100)), metric=['mDice'], pre_eval=True)
 fp16 = dict()
 
 work_dir = f'./work_dirs/tract/baseline'
