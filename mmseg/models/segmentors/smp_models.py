@@ -244,7 +244,6 @@ class SMPUnet(BaseSegmentor):
         x = self.extract_feat(img)
 
         losses = dict()
-
         loss_decode = self._decode_head_forward_train(x, img_metas,
                                                       gt_semantic_seg)
         losses.update(loss_decode)
