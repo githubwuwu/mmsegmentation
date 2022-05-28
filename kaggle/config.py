@@ -23,7 +23,7 @@ model = dict(
 
 # dataset settings
 dataset_type = 'CustomDataset'
-data_root = './data/mmseg_train/'
+data_root = '../mmseg_train/'
 classes = ['large_bowel', 'small_bowel', 'stomach']
 palette = [[0, 0, 0], [128, 128, 128], [255, 255, 255]]
 img_norm_cfg = dict(mean=[0, 0, 0], std=[1, 1, 1], to_rgb=True)
